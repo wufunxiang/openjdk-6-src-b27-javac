@@ -64,97 +64,102 @@ import com.sun.tools.javac.util.*;
  *  deletion without notice.</b> */
 public class ClassFile {
 
-    public final static int JAVA_MAGIC = 0xCAFEBABE;
+	public final static int JAVA_MAGIC = 0xCAFEBABE;
 
-    // see Target
-    public final static int CONSTANT_Utf8 = 1;
-    public final static int CONSTANT_Unicode = 2;
-    public final static int CONSTANT_Integer = 3;
-    public final static int CONSTANT_Float = 4;
-    public final static int CONSTANT_Long = 5;
-    public final static int CONSTANT_Double = 6;
-    public final static int CONSTANT_Class = 7;
-    public final static int CONSTANT_String = 8;
-    public final static int CONSTANT_Fieldref = 9;
-    public final static int CONSTANT_Methodref = 10;
-    public final static int CONSTANT_InterfaceMethodref = 11;
-    public final static int CONSTANT_NameandType = 12;
+	// see Target
+	public final static int CONSTANT_Utf8 = 1;
+	public final static int CONSTANT_Unicode = 2;
+	public final static int CONSTANT_Integer = 3;
+	public final static int CONSTANT_Float = 4;
+	public final static int CONSTANT_Long = 5;
+	public final static int CONSTANT_Double = 6;
+	public final static int CONSTANT_Class = 7;
+	public final static int CONSTANT_String = 8;
+	public final static int CONSTANT_Fieldref = 9;
+	public final static int CONSTANT_Methodref = 10;
+	public final static int CONSTANT_InterfaceMethodref = 11;
+	public final static int CONSTANT_NameandType = 12;
 
-    public final static int MAX_PARAMETERS = 0xff;
-    public final static int MAX_DIMENSIONS = 0xff;
-    public final static int MAX_CODE = 0xffff;
-    public final static int MAX_LOCALS = 0xffff;
-    public final static int MAX_STACK = 0xffff;
+	public final static int MAX_PARAMETERS = 0xff;
+	public final static int MAX_DIMENSIONS = 0xff;
+	public final static int MAX_CODE = 0xffff;
+	public final static int MAX_LOCALS = 0xffff;
+	public final static int MAX_STACK = 0xffff;
 
+	/************************************************************************
+	 * String Translation Routines
+	 ***********************************************************************/
 
-/************************************************************************
- * String Translation Routines
- ***********************************************************************/
+	/**
+	 * Return internal representation of buf[offset..offset+len-1], converting
+	 * '/' to '.'.
+	 */
+	public static byte[] internalize(byte[] buf, int offset, int len) {
+		byte[] translated = new byte[len];
+		for (int j = 0; j < len; j++) {
+			byte b = buf[offset + j];
+			if (b == '/')
+				translated[j] = (byte) '.';
+			else
+				translated[j] = b;
+		}
+		return translated;
+	}
 
-    /** Return internal representation of buf[offset..offset+len-1],
-     *  converting '/' to '.'.
-     */
-    public static byte[] internalize(byte[] buf, int offset, int len) {
-        byte[] translated = new byte[len];
-        for (int j = 0; j < len; j++) {
-            byte b = buf[offset + j];
-            if (b == '/') translated[j] = (byte) '.';
-            else translated[j] = b;
-        }
-        return translated;
-    }
+	/**
+	 * Return internal representation of given name, converting '/' to '.'.
+	 */
+	public static byte[] internalize(Name name) {
+		return internalize(name.table.names, name.index, name.len);
+	}
 
-    /** Return internal representation of given name,
-     *  converting '/' to '.'.
-     */
-    public static byte[] internalize(Name name) {
-        return internalize(name.table.names, name.index, name.len);
-    }
+	/**
+	 * Return external representation of buf[offset..offset+len-1], converting
+	 * '.' to '/'.
+	 */
+	public static byte[] externalize(byte[] buf, int offset, int len) {
+		byte[] translated = new byte[len];
+		for (int j = 0; j < len; j++) {
+			byte b = buf[offset + j];
+			if (b == '.')
+				translated[j] = (byte) '/';
+			else
+				translated[j] = b;
+		}
+		return translated;
+	}
 
-    /** Return external representation of buf[offset..offset+len-1],
-     *  converting '.' to '/'.
-     */
-    public static byte[] externalize(byte[] buf, int offset, int len) {
-        byte[] translated = new byte[len];
-        for (int j = 0; j < len; j++) {
-            byte b = buf[offset + j];
-            if (b == '.') translated[j] = (byte) '/';
-            else translated[j] = b;
-        }
-        return translated;
-    }
+	/**
+	 * Return external representation of given name, converting '/' to '.'.
+	 */
+	public static byte[] externalize(Name name) {
+		return externalize(name.table.names, name.index, name.len);
+	}
 
-    /** Return external representation of given name,
-     *  converting '/' to '.'.
-     */
-    public static byte[] externalize(Name name) {
-        return externalize(name.table.names, name.index, name.len);
-    }
+	/************************************************************************
+	 * Name-and-type
+	 ***********************************************************************/
 
-/************************************************************************
- * Name-and-type
- ***********************************************************************/
+	/**
+	 * A class for the name-and-type signature of a method or field.
+	 */
+	public static class NameAndType {
+		Name name;
+		Type type;
 
-    /** A class for the name-and-type signature of a method or field.
-     */
-    public static class NameAndType {
-        Name name;
-        Type type;
+		NameAndType(Name name, Type type) {
+			this.name = name;
+			this.type = type;
+		}
 
-        NameAndType(Name name, Type type) {
-            this.name = name;
-            this.type = type;
-        }
+		public boolean equals(Object other) {
+			return other instanceof NameAndType
+					&& name == ((NameAndType) other).name
+					&& type.equals(((NameAndType) other).type);
+		}
 
-        public boolean equals(Object other) {
-            return
-                other instanceof NameAndType &&
-                name == ((NameAndType) other).name &&
-                type.equals(((NameAndType) other).type);
-        }
-
-        public int hashCode() {
-            return name.hashCode() * type.hashCode();
-        }
-    }
+		public int hashCode() {
+			return name.hashCode() * type.hashCode();
+		}
+	}
 }

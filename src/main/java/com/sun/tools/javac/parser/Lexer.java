@@ -29,114 +29,114 @@ import com.sun.tools.javac.util.*;
 import com.sun.tools.javac.util.Position.LineMap;
 
 /**
- * The lexical analyzer maps an input stream consisting of ASCII
- * characters and Unicode escapes into a token sequence.
- *
- * <p><b>This is NOT part of any supported API.
- * If you write code that depends on this, you do so at your own risk.
- * This code and its internal interfaces are subject to change or
- * deletion without notice.</b>
+ * The lexical analyzer maps an input stream consisting of ASCII characters and
+ * Unicode escapes into a token sequence.
+ * 
+ * <p>
+ * <b>This is NOT part of any supported API. If you write code that depends on
+ * this, you do so at your own risk. This code and its internal interfaces are
+ * subject to change or deletion without notice.</b>
  */
 public interface Lexer {
 
-    /**
-     * Has a @deprecated been encountered in last doc comment?
-     * This needs to be reset by client with resetDeprecatedFlag.
-     */
-    boolean deprecatedFlag();
+	/**
+	 * Has a @deprecated been encountered in last doc comment? This needs to be
+	 * reset by client with resetDeprecatedFlag.
+	 */
+	boolean deprecatedFlag();
 
-    void resetDeprecatedFlag();
+	void resetDeprecatedFlag();
 
-    /**
-     * Returns the documentation string of the current token.
-     */
-    String docComment();
+	/**
+	 * Returns the documentation string of the current token.
+	 */
+	String docComment();
 
-    /**
-     * Return the last character position of the current token.
-     */
-    int endPos();
+	/**
+	 * Return the last character position of the current token.
+	 */
+	int endPos();
 
-    /**
-     * Return the position where a lexical error occurred;
-     */
-    int errPos();
+	/**
+	 * Return the position where a lexical error occurred;
+	 */
+	int errPos();
 
-    /**
-     * Set the position where a lexical error occurred;
-     */
-    void errPos(int pos);
+	/**
+	 * Set the position where a lexical error occurred;
+	 */
+	void errPos(int pos);
 
-    /**
-     * Build a map for translating between line numbers and
-     * positions in the input.
-     *
-     * @return a LineMap
-     */
-    LineMap getLineMap();
+	/**
+	 * Build a map for translating between line numbers and positions in the
+	 * input.
+	 * 
+	 * @return a LineMap
+	 */
+	LineMap getLineMap();
 
-    /**
-     * Returns a copy of the input buffer, up to its inputLength.
-     * Unicode escape sequences are not translated.
-     */
-    char[] getRawCharacters();
+	/**
+	 * Returns a copy of the input buffer, up to its inputLength. Unicode escape
+	 * sequences are not translated.
+	 */
+	char[] getRawCharacters();
 
-    /**
-     * Returns a copy of a character array subset of the input buffer.
-     * The returned array begins at the <code>beginIndex</code> and
-     * extends to the character at index <code>endIndex - 1</code>.
-     * Thus the length of the substring is <code>endIndex-beginIndex</code>.
-     * This behavior is like
-     * <code>String.substring(beginIndex, endIndex)</code>.
-     * Unicode escape sequences are not translated.
-     *
-     * @param beginIndex the beginning index, inclusive.
-     * @param endIndex the ending index, exclusive.
-     * @throws IndexOutOfBounds if either offset is outside of the
-     *         array bounds
-     */
-    char[] getRawCharacters(int beginIndex, int endIndex);
+	/**
+	 * Returns a copy of a character array subset of the input buffer. The
+	 * returned array begins at the <code>beginIndex</code> and extends to the
+	 * character at index <code>endIndex - 1</code>. Thus the length of the
+	 * substring is <code>endIndex-beginIndex</code>. This behavior is like
+	 * <code>String.substring(beginIndex, endIndex)</code>. Unicode escape
+	 * sequences are not translated.
+	 * 
+	 * @param beginIndex
+	 *            the beginning index, inclusive.
+	 * @param endIndex
+	 *            the ending index, exclusive.
+	 * @throws IndexOutOfBounds
+	 *             if either offset is outside of the array bounds
+	 */
+	char[] getRawCharacters(int beginIndex, int endIndex);
 
-    /**
-     * Return the name of an identifier or token for the current token.
-     */
-    Name name();
+	/**
+	 * Return the name of an identifier or token for the current token.
+	 */
+	Name name();
 
-    /**
-     * Read token.
-     */
-    void nextToken();
+	/**
+	 * Read token.
+	 */
+	void nextToken();
 
-    /**
-     * Return the current token's position: a 0-based
-     *  offset from beginning of the raw input stream
-     *  (before unicode translation)
-     */
-    int pos();
+	/**
+	 * Return the current token's position: a 0-based offset from beginning of
+	 * the raw input stream (before unicode translation)
+	 */
+	int pos();
 
-    /**
-     * Return the last character position of the previous token.
-     */
-    int prevEndPos();
+	/**
+	 * Return the last character position of the previous token.
+	 */
+	int prevEndPos();
 
-    /**
-     * Return the radix of a numeric literal token.
-     */
-    int radix();
+	/**
+	 * Return the radix of a numeric literal token.
+	 */
+	int radix();
 
-    /**
-     * The value of a literal token, recorded as a string.
-     *  For integers, leading 0x and 'l' suffixes are suppressed.
-     */
-    String stringVal();
+	/**
+	 * The value of a literal token, recorded as a string. For integers, leading
+	 * 0x and 'l' suffixes are suppressed.
+	 */
+	String stringVal();
 
-    /**
-     * Return the current token, set by nextToken().
-     */
-    Token token();
+	/**
+	 * Return the current token, set by nextToken().
+	 */
+	Token token();
 
-    /**
-     * Sets the current token.
-     */
-    void token(Token token);
+	/**
+	 * Sets the current token.
+	 */
+	void token(Token token);
 }

@@ -35,264 +35,262 @@ import com.sun.tools.javac.util.Options;
 import com.sun.tools.javac.util.Pair;
 import static com.sun.tools.javac.code.Flags.*;
 
-
 /**
  * A class for handling -Xlint suboptions and @SuppresssWarnings.
- *
- *  <p><b>This is NOT part of any supported API.
- *  If you write code that depends on this, you do so at your own risk.
- *  This code and its internal interfaces are subject to change or
- *  deletion without notice.</b>
+ * 
+ * <p>
+ * <b>This is NOT part of any supported API. If you write code that depends on
+ * this, you do so at your own risk. This code and its internal interfaces are
+ * subject to change or deletion without notice.</b>
  */
-public class Lint
-{
-    /** The context key for the root Lint object. */
-    protected static final Context.Key<Lint> lintKey = new Context.Key<Lint>();
+public class Lint {
+	/** The context key for the root Lint object. */
+	protected static final Context.Key<Lint> lintKey = new Context.Key<Lint>();
 
-    /** Get the root Lint instance. */
-    public static Lint instance(Context context) {
-        Lint instance = context.get(lintKey);
-        if (instance == null)
-            instance = new Lint(context);
-        return instance;
-    }
+	/** Get the root Lint instance. */
+	public static Lint instance(Context context) {
+		Lint instance = context.get(lintKey);
+		if (instance == null)
+			instance = new Lint(context);
+		return instance;
+	}
 
-    /**
-     * Returns the result of combining the values in this object with
-     * the given annotation.
-     */
-    public Lint augment(Attribute.Compound attr) {
-        return augmentor.augment(this, attr);
-    }
+	/**
+	 * Returns the result of combining the values in this object with the given
+	 * annotation.
+	 */
+	public Lint augment(Attribute.Compound attr) {
+		return augmentor.augment(this, attr);
+	}
 
+	/**
+	 * Returns the result of combining the values in this object with the given
+	 * annotations.
+	 */
+	public Lint augment(List<Attribute.Compound> attrs) {
+		return augmentor.augment(this, attrs);
+	}
 
-    /**
-     * Returns the result of combining the values in this object with
-     * the given annotations.
-     */
-    public Lint augment(List<Attribute.Compound> attrs) {
-        return augmentor.augment(this, attrs);
-    }
+	/**
+	 * Returns the result of combining the values in this object with the given
+	 * annotations and flags.
+	 */
+	public Lint augment(List<Attribute.Compound> attrs, long flags) {
+		Lint l = augmentor.augment(this, attrs);
+		if ((flags & DEPRECATED) != 0) {
+			if (l == this)
+				l = new Lint(this);
+			l.values.remove(LintCategory.DEPRECATION);
+			l.suppressedValues.add(LintCategory.DEPRECATION);
+		}
+		return l;
+	}
 
-    /**
-     * Returns the result of combining the values in this object with
-     * the given annotations and flags.
-     */
-    public Lint augment(List<Attribute.Compound> attrs, long flags) {
-        Lint l = augmentor.augment(this, attrs);
-        if ((flags & DEPRECATED) != 0) {
-            if (l == this)
-                l = new Lint(this);
-            l.values.remove(LintCategory.DEPRECATION);
-            l.suppressedValues.add(LintCategory.DEPRECATION);
-        }
-        return l;
-    }
+	private final AugmentVisitor augmentor;
 
+	private final EnumSet<LintCategory> values;
+	private final EnumSet<LintCategory> suppressedValues;
 
-    private final AugmentVisitor augmentor;
+	private static Map<String, LintCategory> map = new HashMap<String, LintCategory>();
 
-    private final EnumSet<LintCategory> values;
-    private final EnumSet<LintCategory> suppressedValues;
+	protected Lint(Context context) {
+		// initialize values according to the lint options
+		Options options = Options.instance(context);
+		values = EnumSet.noneOf(LintCategory.class);
+		for (Map.Entry<String, LintCategory> e : map.entrySet()) {
+			if (options.lint(e.getKey()))
+				values.add(e.getValue());
+		}
 
-    private static Map<String, LintCategory> map = new HashMap<String,LintCategory>();
+		suppressedValues = EnumSet.noneOf(LintCategory.class);
 
+		context.put(lintKey, this);
+		augmentor = new AugmentVisitor(context);
+	}
 
-    protected Lint(Context context) {
-        // initialize values according to the lint options
-        Options options = Options.instance(context);
-        values = EnumSet.noneOf(LintCategory.class);
-        for (Map.Entry<String, LintCategory> e: map.entrySet()) {
-            if (options.lint(e.getKey()))
-                values.add(e.getValue());
-        }
+	protected Lint(Lint other) {
+		this.augmentor = other.augmentor;
+		this.values = other.values.clone();
+		this.suppressedValues = other.suppressedValues.clone();
+	}
 
-        suppressedValues = EnumSet.noneOf(LintCategory.class);
+	public String toString() {
+		return "Lint:[values" + values + " suppressedValues" + suppressedValues
+				+ "]";
+	}
 
-        context.put(lintKey, this);
-        augmentor = new AugmentVisitor(context);
-    }
+	/**
+	 * Categories of warnings that can be generated by the compiler.
+	 */
+	public enum LintCategory {
+		/**
+		 * Warn about use of unnecessary casts.
+		 */
+		CAST("cast"),
 
-    protected Lint(Lint other) {
-        this.augmentor = other.augmentor;
-        this.values = other.values.clone();
-        this.suppressedValues = other.suppressedValues.clone();
-    }
+		/**
+		 * Warn about use of deprecated items.
+		 */
+		DEPRECATION("deprecation"),
 
-    public String toString() {
-        return "Lint:[values" + values + " suppressedValues" + suppressedValues + "]";
-    }
+		/**
+		 * Warn about items which are documented with an {@code @deprecated}
+		 * JavaDoc comment, but which do not have {@code @Deprecated}
+		 * annotation.
+		 */
+		DEP_ANN("dep-ann"),
 
-    /**
-     * Categories of warnings that can be generated by the compiler.
-     */
-    public enum LintCategory {
-        /**
-         * Warn about use of unnecessary casts.
-         */
-        CAST("cast"),
+		/**
+		 * Warn about division by constant integer 0.
+		 */
+		DIVZERO("divzero"),
 
-        /**
-         * Warn about use of deprecated items.
-         */
-        DEPRECATION("deprecation"),
+		/**
+		 * Warn about empty statement after if.
+		 */
+		EMPTY("empty"),
 
-        /**
-         * Warn about items which are documented with an {@code @deprecated} JavaDoc
-         * comment, but which do not have {@code @Deprecated} annotation.
-         */
-        DEP_ANN("dep-ann"),
+		/**
+		 * Warn about falling through from one case of a switch statement to the
+		 * next.
+		 */
+		FALLTHROUGH("fallthrough"),
 
-        /**
-         * Warn about division by constant integer 0.
-         */
-        DIVZERO("divzero"),
+		/**
+		 * Warn about finally clauses that do not terminate normally.
+		 */
+		FINALLY("finally"),
 
-        /**
-         * Warn about empty statement after if.
-         */
-        EMPTY("empty"),
+		/**
+		 * Warn about issues regarding method overrides.
+		 */
+		OVERRIDES("overrides"),
 
-        /**
-         * Warn about falling through from one case of a switch statement to the next.
-         */
-        FALLTHROUGH("fallthrough"),
+		/**
+		 * Warn about invalid path elements on the command line. Such warnings
+		 * cannot be suppressed with the SuppressWarnings annotation.
+		 */
+		PATH("path"),
 
-        /**
-         * Warn about finally clauses that do not terminate normally.
-         */
-        FINALLY("finally"),
+		/**
+		 * Warn about Serializable classes that do not provide a serial version
+		 * ID.
+		 */
+		SERIAL("serial"),
 
-        /**
-         * Warn about issues regarding method overrides.
-         */
-        OVERRIDES("overrides"),
+		/**
+		 * Warn about unchecked operations on raw types.
+		 */
+		UNCHECKED("unchecked");
 
-        /**
-         * Warn about invalid path elements on the command line.
-         * Such warnings cannot be suppressed with the SuppressWarnings
-         * annotation.
-         */
-        PATH("path"),
+		LintCategory(String option) {
+			this.option = option;
+			map.put(option, this);
+		}
 
-        /**
-         * Warn about Serializable classes that do not provide a serial version ID.
-         */
-        SERIAL("serial"),
+		static LintCategory get(String option) {
+			return map.get(option);
+		}
 
-        /**
-         * Warn about unchecked operations on raw types.
-         */
-        UNCHECKED("unchecked");
+		private final String option;
+	};
 
-        LintCategory(String option) {
-            this.option = option;
-            map.put(option, this);
-        }
+	/**
+	 * Checks if a warning category is enabled. A warning category may be
+	 * enabled on the command line, or by default, and can be temporarily
+	 * disabled with the SuppressWarnings annotation.
+	 */
+	public boolean isEnabled(LintCategory lc) {
+		return values.contains(lc);
+	}
 
-        static LintCategory get(String option) {
-            return map.get(option);
-        }
+	/**
+	 * Checks is a warning category has been specifically suppressed, by means
+	 * of the SuppressWarnings annotation, or, in the case of the deprecated
+	 * category, whether it has been implicitly suppressed by virtue of the
+	 * current entity being itself deprecated.
+	 */
+	public boolean isSuppressed(LintCategory lc) {
+		return suppressedValues.contains(lc);
+	}
 
-        private final String option;
-    };
+	protected static class AugmentVisitor implements Attribute.Visitor {
+		private final Context context;
+		private Symtab syms;
+		private Lint parent;
+		private Lint lint;
 
-    /**
-     * Checks if a warning category is enabled. A warning category may be enabled
-     * on the command line, or by default, and can be temporarily disabled with
-     * the SuppressWarnings annotation.
-     */
-    public boolean isEnabled(LintCategory lc) {
-        return values.contains(lc);
-    }
+		AugmentVisitor(Context context) {
+			// to break an ugly sequence of initialization dependencies,
+			// we defer the initialization of syms until it is needed
+			this.context = context;
+		}
 
-    /**
-     * Checks is a warning category has been specifically suppressed, by means
-     * of the SuppressWarnings annotation, or, in the case of the deprecated
-     * category, whether it has been implicitly suppressed by virtue of the
-     * current entity being itself deprecated.
-     */
-    public boolean isSuppressed(LintCategory lc) {
-        return suppressedValues.contains(lc);
-    }
+		Lint augment(Lint parent, Attribute.Compound attr) {
+			initSyms();
+			this.parent = parent;
+			lint = null;
+			attr.accept(this);
+			return (lint == null ? parent : lint);
+		}
 
-    protected static class AugmentVisitor implements Attribute.Visitor {
-        private final Context context;
-        private Symtab syms;
-        private Lint parent;
-        private Lint lint;
+		Lint augment(Lint parent, List<Attribute.Compound> attrs) {
+			initSyms();
+			this.parent = parent;
+			lint = null;
+			for (Attribute.Compound a : attrs) {
+				a.accept(this);
+			}
+			return (lint == null ? parent : lint);
+		}
 
-        AugmentVisitor(Context context) {
-            // to break an ugly sequence of initialization dependencies,
-            // we defer the initialization of syms until it is needed
-            this.context = context;
-        }
+		private void initSyms() {
+			if (syms == null)
+				syms = Symtab.instance(context);
+		}
 
-        Lint augment(Lint parent, Attribute.Compound attr) {
-            initSyms();
-            this.parent = parent;
-            lint = null;
-            attr.accept(this);
-            return (lint == null ? parent : lint);
-        }
+		private void suppress(LintCategory lc) {
+			if (lint == null)
+				lint = new Lint(parent);
+			lint.suppressedValues.add(lc);
+			lint.values.remove(lc);
+		}
 
-        Lint augment(Lint parent, List<Attribute.Compound> attrs) {
-            initSyms();
-            this.parent = parent;
-            lint = null;
-            for (Attribute.Compound a: attrs) {
-                a.accept(this);
-            }
-            return (lint == null ? parent : lint);
-        }
+		public void visitConstant(Attribute.Constant value) {
+			if (value.type.tsym == syms.stringType.tsym) {
+				LintCategory lc = LintCategory.get((String) (value.value));
+				if (lc != null)
+					suppress(lc);
+			}
+		}
 
-        private void initSyms() {
-            if (syms == null)
-                syms = Symtab.instance(context);
-        }
+		public void visitClass(Attribute.Class clazz) {
+		}
 
-        private void suppress(LintCategory lc) {
-            if (lint == null)
-                lint = new Lint(parent);
-            lint.suppressedValues.add(lc);
-            lint.values.remove(lc);
-        }
+		// If we find a @SuppressWarnings annotation, then we continue
+		// walking the tree, in order to suppress the individual warnings
+		// specified in the @SuppressWarnings annotation.
+		public void visitCompound(Attribute.Compound compound) {
+			if (compound.type.tsym == syms.suppressWarningsType.tsym) {
+				for (List<Pair<MethodSymbol, Attribute>> v = compound.values; v
+						.nonEmpty(); v = v.tail) {
+					Pair<MethodSymbol, Attribute> value = v.head;
+					if (value.fst.name.toString().equals("value"))
+						value.snd.accept(this);
+				}
 
-        public void visitConstant(Attribute.Constant value) {
-            if (value.type.tsym == syms.stringType.tsym) {
-                LintCategory lc = LintCategory.get((String) (value.value));
-                if (lc != null)
-                    suppress(lc);
-            }
-        }
+			}
+		}
 
-        public void visitClass(Attribute.Class clazz) {
-        }
+		public void visitArray(Attribute.Array array) {
+			for (Attribute value : array.values)
+				value.accept(this);
+		}
 
-        // If we find a @SuppressWarnings annotation, then we continue
-        // walking the tree, in order to suppress the individual warnings
-        // specified in the @SuppressWarnings annotation.
-        public void visitCompound(Attribute.Compound compound) {
-            if (compound.type.tsym == syms.suppressWarningsType.tsym) {
-                for (List<Pair<MethodSymbol,Attribute>> v = compound.values;
-                     v.nonEmpty(); v = v.tail) {
-                    Pair<MethodSymbol,Attribute> value = v.head;
-                    if (value.fst.name.toString().equals("value"))
-                        value.snd.accept(this);
-                }
+		public void visitEnum(Attribute.Enum e) {
+		}
 
-            }
-        }
-
-        public void visitArray(Attribute.Array array) {
-            for (Attribute value : array.values)
-                value.accept(this);
-        }
-
-        public void visitEnum(Attribute.Enum e) {
-        }
-
-        public void visitError(Attribute.Error e) {
-        }
-    };
+		public void visitError(Attribute.Error e) {
+		}
+	};
 }
